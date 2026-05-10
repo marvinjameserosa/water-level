@@ -1,47 +1,82 @@
 #include <Arduino.h>
-#include "config.h"
-#include "CameraManager.h"
-#include "NetworkManager.h"
-#include "Ultrasonic.h"
+#include <WiFi.h>
+#include <WebServer.h>
+#include "camera_handler.h"
+#include "sensor_handler.h"
 
-CameraManager cameraManager;
-NetworkManager networkManager;
-Ultrasonic ultrasonic(WATERLEVEL_TRIG_PIN, WATERLEVEL_ECHO_PIN);
+// ==========================================
+// NODE CONFIGURATION
+// Change to 'false' when flashing Node 2
+// ==========================================
+#define IS_NODE_1 false 
+
+#if IS_NODE_1
+  IPAddress local_IP(192, 168, 4, 2);
+  String nodeId = "node_1";
+#else
+  IPAddress local_IP(192, 168, 4, 3);
+  String nodeId = "node_2";
+#endif
+
+IPAddress gateway(192, 168, 4, 1);
+IPAddress subnet(255, 255, 255, 0);
+
+WebServer server(80);
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  Serial.println("\n--- Starting ESP32-CAM " + nodeId + " ---");
+
+  // Seed random number generator for mock sensor data
+  randomSeed(micros());
+
+  // Initialize Modules
+  setupCamera();
+  setupSensor();
+
+  // Force Static IP
+  if (!WiFi.config(local_IP, gateway, subnet)) {
+    Serial.println("STA Failed to configure Static IP");
+  }
+
+  // Connect to Pico Access Point
+  Serial.print("Connecting to AP 'waterlevel'");
+  WiFi.begin("waterlevel");
   
-  ultrasonic.begin();
-  cameraManager.begin();
-  networkManager.begin();
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected! IP Address: " + WiFi.localIP().toString());
+
+  // Setup API Routes
+  server.on("/capture", HTTP_GET, []() {
+    handleCapture(server);
+  });
+  server.on("/sensor", HTTP_GET, []() {
+    handleSensorRead(server);
+  });
   
-  networkManager.onStateRequest([](float& h, float& d, float& diff) {
-    h = ultrasonic.readDistanceCm(3, 20);
-    d = cfg::kContainerDiameterCm;
-    
-    if (isfinite(h)) {
-      diff = fabsf(h - d);
-    } else {
-      diff = 0;
-    }
+  // CORS Preflight for the Next.js Dashboard
+  server.on("/capture", HTTP_OPTIONS, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(204);
+  });
+  server.on("/sensor", HTTP_OPTIONS, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(204);
   });
 
-  networkManager.onImageRequest(
-    []() -> camera_fb_t* {
-      Serial.println("Received /api/image trigger from dashboard.");
-      return cameraManager.capture();
-    },
-    [](camera_fb_t* fb) {
-      if (fb) {
-        cameraManager.returnFrame(fb);
-      }
-    }
-  );
-
-  Serial.println("Slave Node Initialized and listening for commands.");
+  // Start listening
+  server.begin();
+  Serial.println("Web server started. Waiting for triggers...");
 }
 
 void loop() {
-  networkManager.process();
+  // Listen for incoming requests from Next.js
+  server.handleClient();
 }

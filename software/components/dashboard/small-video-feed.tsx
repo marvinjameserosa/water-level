@@ -9,6 +9,8 @@ interface SmallVideoFeedProps {
   isCapturing?: boolean;
   imageUrl?: string;
   onManualCapture?: () => void | Promise<void>;
+  currentWaterLevel?: number;
+  totalDepth?: number;
 }
 
 export function SmallVideoFeed({
@@ -16,6 +18,8 @@ export function SmallVideoFeed({
   isCapturing = false,
   imageUrl,
   onManualCapture,
+  currentWaterLevel,
+  totalDepth = 20,
 }: SmallVideoFeedProps) {
   const handleCapture = () => {
     if (isCapturing) {
@@ -55,50 +59,64 @@ export function SmallVideoFeed({
                 strokeWidth="3"
               />
 
-              {/* Water inside tank */}
-              <rect
-                x="80"
-                y="180"
-                width="240"
-                height="80"
-                fill="#3498DB"
-                opacity="0.4"
-              />
-
-              {/* Measurement lines */}
-              {[0, 50, 100, 150, 200].map((y, i) => (
-                <g key={i}>
-                  <line
-                    x1="70"
-                    y1={60 + y}
-                    x2="80"
-                    y2={60 + y}
-                    stroke="#95A5A6"
-                    strokeWidth="1"
+              {typeof currentWaterLevel === "number" ? (
+                <>
+                  {/* Water inside tank */}
+                  <rect
+                    x="80"
+                    y={260 - Math.min(200, (currentWaterLevel / totalDepth) * 200)}
+                    width="240"
+                    height={Math.min(200, (currentWaterLevel / totalDepth) * 200)}
+                    fill="#3498DB"
+                    opacity="0.4"
                   />
-                  <text
-                    x="50"
-                    y={65 + y}
-                    fontSize="12"
-                    fill="#6B7C8A"
-                    textAnchor="end"
-                  >
-                    {(20 - i * 5).toFixed(1)}
-                  </text>
-                </g>
-              ))}
 
-              {/* Water level indicator */}
-              <line
-                x1="80"
-                y1="180"
-                x2="320"
-                y2="180"
-                stroke="#3498DB"
-                strokeWidth="2"
-                strokeDasharray="5,5"
-              />
-              <circle cx="320" cy="180" r="4" fill="#3498DB" />
+                  {/* Measurement lines */}
+                  {[0, 50, 100, 150, 200].map((y, i) => (
+                    <g key={i}>
+                      <line
+                        x1="70"
+                        y1={60 + y}
+                        x2="80"
+                        y2={60 + y}
+                        stroke="#95A5A6"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="50"
+                        y={65 + y}
+                        fontSize="12"
+                        fill="#6B7C8A"
+                        textAnchor="end"
+                      >
+                        {(totalDepth - (i * totalDepth) / 4).toFixed(1)}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Water level indicator */}
+                  <line
+                    x1="80"
+                    y1={260 - Math.min(200, (currentWaterLevel / totalDepth) * 200)}
+                    x2="320"
+                    y2={260 - Math.min(200, (currentWaterLevel / totalDepth) * 200)}
+                    stroke="#3498DB"
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                  />
+                  <circle cx="320" cy={260 - Math.min(200, (currentWaterLevel / totalDepth) * 200)} r="4" fill="#3498DB" />
+                </>
+              ) : (
+                <text
+                  x="200"
+                  y="160"
+                  fontSize="16"
+                  fill="#95A5A6"
+                  textAnchor="middle"
+                >
+                  No Data Available
+                </text>
+              )}
 
               {/* Sensor indicator */}
               <circle cx="200" cy="40" r="6" fill="#27AE60" />

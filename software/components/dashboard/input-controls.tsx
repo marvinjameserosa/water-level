@@ -4,10 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 interface InputControlsProps {
-  containerDiameter: number;
-  userThreshold: number;
-  onDiameterChange: (value: number) => void;
-  onThresholdChange: (value: number) => void;
+  containerDiameter: number | string;
+  userThreshold: number | string;
+  onDiameterChange: (value: number | string) => void;
+  onThresholdChange: (value: number | string) => void;
 }
 
 export function InputControls({
@@ -24,24 +24,24 @@ export function InputControls({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Container Diameter (D) [cm]
+            Container Depth / Total Height [cm]
           </label>
           <Input
             type="number"
             value={containerDiameter}
-            onChange={(e) => onDiameterChange(parseFloat(e.target.value) || 0)}
+            onChange={(e) => onDiameterChange(e.target.value === "" ? "" : parseFloat(e.target.value))}
             step="0.1"
             className="bg-card"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            User-Defined Alert Threshold [cm]
+            Alert me if Water Level falls below [cm]
           </label>
           <Input
             type="number"
             value={userThreshold}
-            onChange={(e) => onThresholdChange(parseFloat(e.target.value) || 0)}
+            onChange={(e) => onThresholdChange(e.target.value === "" ? "" : parseFloat(e.target.value))}
             step="0.1"
             className="bg-card"
           />

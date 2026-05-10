@@ -17,9 +17,10 @@ interface Reading {
 
 interface ReadingsTableProps {
   readings: Reading[];
+  alertThreshold: number | string;
 }
 
-export function ReadingsTable({ readings }: ReadingsTableProps) {
+export function ReadingsTable({ readings, alertThreshold }: ReadingsTableProps) {
   return (
     <Card className="p-6 border border-border">
       <h2 className="text-lg font-semibold text-foreground mb-4">
@@ -36,13 +37,13 @@ export function ReadingsTable({ readings }: ReadingsTableProps) {
                 Timestamp
               </th>
               <th className="text-right py-3 px-4 font-semibold text-foreground">
-                Diameter (cm)
+                Total Depth (cm)
+              </th>
+              <th className="text-right py-3 px-4 font-semibold text-foreground" title="Distance from the sensor at the top down to the water surface">
+                Distance to Water (cm)
               </th>
               <th className="text-right py-3 px-4 font-semibold text-foreground">
-                Level (cm)
-              </th>
-              <th className="text-right py-3 px-4 font-semibold text-foreground">
-                Difference (cm)
+                Water Level (cm)
               </th>
               <th className="text-center py-3 px-4 font-semibold text-foreground">
                 Status
@@ -67,21 +68,21 @@ export function ReadingsTable({ readings }: ReadingsTableProps) {
                 <td className="py-3 px-4 text-right text-foreground">
                   {reading.containerDiameter.toFixed(1)}
                 </td>
-                <td className="py-3 px-4 text-right text-foreground">
-                  {reading.waterLevel.toFixed(1)}
-                </td>
                 <td className="py-3 px-4 text-right font-semibold text-foreground">
                   {reading.difference.toFixed(1)}
+                </td>
+                <td className="py-3 px-4 text-right text-foreground">
+                  {reading.waterLevel.toFixed(1)}
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                      reading.status === "ok"
-                        ? "bg-success/20 text-success"
-                        : "bg-destructive/20 text-destructive"
+                      (typeof alertThreshold === "number" && reading.waterLevel <= alertThreshold)
+                        ? "bg-destructive/20 text-destructive"
+                        : "bg-success/20 text-success"
                     }`}
                   >
-                    {reading.status === "ok" ? "OK" : "Alert"}
+                    {(typeof alertThreshold === "number" && reading.waterLevel <= alertThreshold) ? "ALERT" : "OK"}
                   </span>
                 </td>
                 <td className="py-3 px-4 text-center">
