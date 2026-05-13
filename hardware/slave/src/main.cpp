@@ -8,7 +8,7 @@
 // NODE CONFIGURATION
 // Change to 'false' when flashing Node 2
 // ==========================================
-#define IS_NODE_1 false 
+#define IS_NODE_1 true 
 
 #if IS_NODE_1
   IPAddress local_IP(192, 168, 4, 2);

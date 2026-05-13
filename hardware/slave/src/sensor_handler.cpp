@@ -1,54 +1,63 @@
 #include "sensor_handler.h"
 
-// --- SENSOR CONFIGURATION ---
+// --- HARDWARE CONFIGURATION ---
 #define TRIG_PIN 14
 #define ECHO_PIN 13
+
+// --- CALIBRATION CONSTANTS ---
+// Adjust SOUND_SPEED if the error gets worse at longer distances.
+// 0.0343 is standard for room temperature (~20°C).
+const float SOUND_SPEED = 0.0343; 
+const int SAMPLES = 15; 
 
 void setupSensor() {
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
-    Serial.println("Ultrasonic sensor hardware initialized on Pins 13 & 14.");
+    Serial.println("Stabilized Sensor Logic (Raw) Initialized.");
+}
+
+float getAverageDistance() {
+    float total = 0;
+    int successfulPings = 0;
+
+    for (int i = 0; i < SAMPLES; i++) {
+        digitalWrite(TRIG_PIN, LOW);
+        delayMicroseconds(2);
+        digitalWrite(TRIG_PIN, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(TRIG_PIN, LOW);
+
+        // 30ms timeout for about 5 meters range
+        long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+
+        if (duration > 0) {
+            float raw = (duration * SOUND_SPEED) / 2.0;
+            total += raw;
+            successfulPings++;
+        }
+
+        // Short delay between pings to let internal echoes dissipate
+        delay(25); 
+    }
+
+    if (successfulPings == 0) return 0.0;
+    
+    // Return the pure average without the 0.6 subtraction
+    return (total / successfulPings);
 }
 
 void handleSensorRead(WebServer& server) {
-    Serial.println("Sensor read requested...");
+    Serial.println("Processing raw stabilized read...");
     
-    // 1. Send the Ultrasonic Ping
-    digitalWrite(TRIG_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG_PIN, LOW);
+    float distance = getAverageDistance();
 
-    // 2. Read the Echo pulse (30ms timeout)
-    long duration = pulseIn(ECHO_PIN, HIGH, 30000); 
-
-    // 3. Handle Sensor Failure/Timeout
-    if (duration == 0) {
-        Serial.println("Error: Sensor timeout (No echo received).");
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.sendHeader("Connection", "close");
-        server.send(500, "application/json", "{\"error\": \"Sensor timeout\"}");
-        return;
-    }
-
-    // 4. Process the Math (Raw Distance Only)
-    // Speed of sound is 0.034 cm/microsecond. Divide by 2 for the round trip.
-    float distance = (duration * 0.034) / 2.0;
-
-    // 5. Construct the JSON payload
-    // We send 'distance' as 'diff' so your Next.js alert logic works immediately.
-    // We send 0 for h and d since we are no longer calculating container depth.
-    String jsonResponse = "{";
-    jsonResponse += "\"h\":0,";
-    jsonResponse += "\"d\":0,";
-    jsonResponse += "\"diff\":" + String(distance, 2);
-    jsonResponse += "}";
+    // Matching your Next.js backend expectation
+    String jsonResponse = "{\"distance\": " + String(distance, 2) + "}";
     
-    // 6. Send the Response
     server.sendHeader("Access-Control-Allow-Origin", "*");
     server.sendHeader("Connection", "close");
     server.send(200, "application/json", jsonResponse);
     
-    Serial.println("Raw distance measured: " + String(distance, 2) + " cm");
+    Serial.print("Raw Distance Sent: ");
+    Serial.println(jsonResponse);
 }
