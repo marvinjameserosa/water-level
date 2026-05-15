@@ -9,6 +9,10 @@ __v0_jsx-dev-runtime.ts
 # Environment variables
 .env*.local
 
+# Data
+public/captures/
+public/data.json
+
 # Common ignores
 node_modules
 .next/
